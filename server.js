@@ -2,39 +2,23 @@ require("dotenv").config();
 
 const http = require("http");
 const fs = require("fs");
-const { GoogleGenAI } = require("@google/genai");
+const { HfInference } = require("@huggingface/inference");
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY
-});
-
-const PORT = 3001;
+const hf = new HfInference(process.env.HF_TOKEN);
 
 const server = http.createServer((req, res) => {
 
-  if (req.method === "GET" && req.url === "/") {
-
+  if (req.url === "/") {
     fs.readFile("index.html", (err, data) => {
-
-      if (err) {
-        res.writeHead(500, {
-          "Content-Type": "text/plain"
-        });
-
-        return res.end("Could not load Thilak AI");
-      }
-
       res.writeHead(200, {
-        "Content-Type": "text/html; charset=utf-8"
+        "Content-Type": "text/html"
       });
-
       res.end(data);
     });
-
     return;
   }
 
-  if (req.method === "POST" && req.url === "/chat") {
+  if (req.url === "/chat" && req.method === "POST") {
 
     let body = "";
 
@@ -46,11 +30,20 @@ const server = http.createServer((req, res) => {
 
       try {
 
-        const { message } = JSON.parse(body);
+        const message = JSON.parse(body).message;
 
-        const result = await ai.models.generateContent({
-          model: "gemini-3.6-flash",
-          contents: message
+        const result = await hf.chatCompletion({
+
+model: "deepseek-ai/DeepSeek-V4.1-Flash",
+
+
+          messages: [
+            {
+              role: "user",
+              content: message
+            }
+          ],
+          max_tokens: 200
         });
 
         res.writeHead(200, {
@@ -58,10 +51,10 @@ const server = http.createServer((req, res) => {
         });
 
         res.end(JSON.stringify({
-          reply: result.text
+          reply: result.choices[0].message.content
         }));
 
-      } catch (error) {
+      } catch(error) {
 
         res.writeHead(500, {
           "Content-Type": "application/json"
@@ -70,7 +63,6 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({
           error: error.message
         }));
-
       }
 
     });
@@ -78,14 +70,15 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  res.writeHead(404, {
-    "Content-Type": "text/plain"
-  });
-
+  res.writeHead(404);
   res.end("Not Found");
 
 });
 
+
+
+const PORT = process.env.PORT || 3000;
+
 server.listen(PORT, () => {
-  console.log(`🤖 Thilak AI v3 running on port ${PORT}`);
+  console.log("🤖 Thilak AI running on port " + PORT);
 });
