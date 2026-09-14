@@ -1,0 +1,5 @@
+{
+  "appId": "com.thilak.ai",
+  "appName": "Thilak AI",
+  "webDir": "cd ~/ThilakAI_v3npx cap add android"
+}

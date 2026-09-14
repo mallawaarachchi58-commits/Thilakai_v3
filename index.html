@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thilak AI v3</title>
+<style>
+body { font-family: Arial, sans-serif; background: #f2f4f8; text-align: center; padding: 20px; }
+h1 { margin-bottom: 10px; }
+button { padding: 12px 18px; margin: 6px; border: none; border-radius: 10px; font-size: 16px; cursor: pointer; }
+p { font-size: 17px; }
+#voiceText, #aiReply { background: white; padding: 15px; margin: 15px auto; max-width: 500px; border-radius: 12px; min-height: 20px; }
+</style>
+
+<style>
+#chatReply { background: white; padding: 15px; margin: 15px auto; max-width: 500px; border-radius: 12px; min-height: 20px; text-align: left; }
+.user-message { background: #dbeafe; padding: 10px 14px; margin: 8px 0; border-radius: 12px; text-align: right; }
+.ai-message { background: #dcfce7; padding: 10px 14px; margin: 8px 0; border-radius: 12px; text-align: left; }
+#chatMessages { max-width: 500px; margin: 15px auto; }
+</style>
+
+<style>
+body.dark-mode { background:#0f172a; color:#e5e7eb; }
+body.dark-mode #chatReply,
+body.dark-mode #voiceText,
+body.dark-mode #aiReply { background:#1e293b; color:#e5e7eb; }
+body.dark-mode input { background:#1e293b; color:#fff; border-color:#475569; }
+</style>
+
+<style>
+.thinking {
+  display:inline-block;
+  font-weight:bold;
+  animation: pulse 1s infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity:0.35; }
+  50% { opacity:1; }
+}
+</style>
+
+<style>
+#chatMessages {
+  background: rgba(255,255,255,0.75);
+  padding: 15px;
+  margin: 15px auto;
+  max-width: 500px;
+  min-height: 180px;
+  max-height: 400px;
+  overflow-y: auto;
+  border-radius: 18px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+}
+.user-message, .ai-message {
+  max-width: 85%;
+  padding: 11px 15px;
+  margin: 10px 0;
+  border-radius: 16px;
+  word-wrap: break-word;
+}
+.user-message {
+  margin-left: auto;
+}
+.ai-message {
+  margin-right: auto;
+}
+</style>
+
+<style>
+#chatInput {
+  box-sizing: border-box;
+  padding: 13px 16px !important;
+  width: calc(100% - 20px) !important;
+  max-width: 500px !important;
+  border-radius: 16px !important;
+  border: 1px solid #cbd5e1 !important;
+  outline: none;
+  font-size: 16px !important;
+  margin-top: 8px;
+}
+#chatInput:focus {
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+</style>
+
+<style>
+button[onclick="sendChat()"] {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+button[onclick="sendChat()"]:active {
+  transform: scale(0.95);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+}
+</style>
+
+<style>
+button[onclick="openMicrophone()"], button[onclick="startVoice()"] {
+  border-radius: 16px;
+  padding: 13px 18px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+button[onclick="openMicrophone()"]:active, button[onclick="startVoice()"]:active {
+  transform: scale(0.95);
+}
+</style>
+
+</head>
+<body>
+<h1>🤖 Thilak AI v3</h1>
+<div class="ai-status">🟢 Online</div>
+
+<p>New version is working.</p>
+
+<button onclick="openCamera()">📷 Camera</button>
+
+<script>
+async function openCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+
+    const video = document.createElement("video");
+    video.autoplay = true;
+    video.playsInline = true;
+    video.srcObject = stream;
+    video.style.width = "100%";
+    video.style.maxWidth = "500px";
+    video.style.marginTop = "20px";
+
+    document.body.appendChild(video);
+  } catch (error) {
+    alert("Camera permission was not granted.");
+  }
+}
+</script>
+
+<button onclick="openMicrophone()">🎤 Microphone</button>
+<script>
+async function openMicrophone() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    alert("🎤 Microphone permission granted!");
+    window.thilakMicStream = stream;
+  } catch (error) {
+    alert("Microphone permission was not granted.");
+  }
+}
+</script>
+
+<button onclick="startVoice()">🗣️ Voice to Text</button>
+<p id="voiceText"></p>
+<script>
+async function voiceAskAI() {
+  startVoice();
+}
+
+function startVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Voice recognition is not supported in this browser.");
+    return;
+  }
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-US";
+  recognition.interimResults = false;
+  recognition.onresult = function(event) {
+    document.getElementById("voiceText").textContent = event.results[0][0].transcript;
+    document.getElementById("chatInput").value = event.results[0][0].transcript;
+    setTimeout(() => sendChat(), 100);
+  };
+  recognition.onerror = function() {
+    alert("Voice recognition error.");
+  };
+  recognition.start();
+}
+</script>
+
+<button onclick="sendVoiceToAI()">🤖 Ask Thilak AI</button>
+<p id="aiReply"></p>
+<script>
+async function sendVoiceToAI() {
+  const text = document.getElementById("voiceText").textContent;
+  if (!text) {
+    alert("Please use Voice to Text first.");
+    return;
+  }
+  try {
+    const response = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text }),
+      signal: window.thilakAbortController.signal,
+    });
+    const data = await response.json();
+    document.getElementById("aiReply").textContent = data.reply || data.error || "No reply received.";
+  } catch (error) {
+    document.getElementById("aiReply").textContent = "Connection error.";
+  }
+}
+</script>
+
+<button onclick="speakAIReply()">🔊 Speak AI Reply</button>
+<script>
+function speakAIReply() {
+  const text = document.getElementById("aiReply").textContent;
+  if (!text) {
+    alert("Please ask Thilak AI first.");
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const speech = new SpeechSynthesisUtterance(text);
+  speech.lang = "en-US";
+  window.speechSynthesis.speak(speech);
+}
+</script>
+
+<h2>💬 Chat with Thilak AI</h2>
+<input id="chatInput" type="text" placeholder="Type your message..." onkeydown="if(event.key==='Enter') sendChat();" style="padding:12px;width:80%;max-width:450px;border-radius:10px;border:1px solid #ccc;font-size:16px;">
+<br>
+<button onclick="sendChat()">📤 Send</button>
+<p id="chatReply"></p>
+<script>
+async function sendChat() {
+  window.thilakAbortController = new AbortController();
+  document.getElementById("chatReply").innerHTML = "<span class='thinking'>🤖 Thilak AI is thinking...</span>";
+  const text = document.getElementById("chatInput").value.trim();
+    document.getElementById("chatInput").value = "";
+  addChatBubble(text, "user");
+  if (!text) {
+    alert("Please type a message.");
+    return;
+  }
+  try {
+    const response = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text }),
+      signal: window.thilakAbortController.signal,
+    });
+    const data = await response.json();
+    document.getElementById("chatReply").textContent = data.reply || data.error || "No reply received.";
+      addChatBubble(data.reply || data.error || "No reply received.", "ai");
+  } catch (error) {
+    document.getElementById("chatReply").textContent = "Connection error.";
+  }
+}
+</script>
+
+<div id="chatMessages"></div>
+<script>
+function addChatBubble(text, type, save = true) {
+  if (save) {
+    const history = JSON.parse(localStorage.getItem("thilakChatHistory") || "[]");
+    history.push({ text: text, type: type });
+    localStorage.setItem("thilakChatHistory", JSON.stringify(history));
+  }
+  const bubble = document.createElement("div");
+  bubble.className = type === "user" ? "user-message" : "ai-message";
+  bubble.textContent = (type === "user" ? "👤 " : "🤖 ") + text;
+  document.getElementById("chatMessages").appendChild(bubble);
+}
+</script>
+
+<script>
+window.addEventListener("DOMContentLoaded", function() {
+  const history = JSON.parse(localStorage.getItem("thilakChatHistory") || "[]");
+  history.forEach(function(item) {
+    addChatBubble(item.text, item.type, false);
+  });
+});
+</script>
+<button onclick="clearChatHistory()">🗑️ Clear Chat History</button>
+<script>
+function clearChatHistory() {
+  localStorage.removeItem("thilakChatHistory");
+  document.getElementById("chatMessages").innerHTML = "";
+}
+</script>
+
+<button onclick="stopAI()">🛑 Stop AI Response</button>
+<script>
+function stopAI() {
+  if (window.thilakAbortController) {
+    window.thilakAbortController.abort();
+    document.getElementById("chatReply").textContent = "🛑 Response stopped.";
+  }
+}
+</script>
+
+<button onclick="toggleTheme()">🌙 Dark / ☀️ Light</button>
+<script>
+function toggleTheme() {
+  document.body.classList.toggle("dark-mode");
+}
+</script>
+
+<button onclick="voiceAskAI()">🎤 Ask Thilak AI by Voice</button>
+
+</body>
+</html>
