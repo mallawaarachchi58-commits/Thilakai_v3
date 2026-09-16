@@ -114,14 +114,17 @@ button[onclick="openMicrophone()"]:active, button[onclick="startVoice()"]:active
 <button onclick="openCamera()">📷 Camera</button>
 
 <script>
+let cameraStream;
+
 async function openCamera() {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
 
     const video = document.createElement("video");
+    video.id = "cameraPreview";
     video.autoplay = true;
     video.playsInline = true;
-    video.srcObject = stream;
+    video.srcObject = cameraStream;
     video.style.width = "100%";
     video.style.maxWidth = "500px";
     video.style.marginTop = "20px";
@@ -133,15 +136,101 @@ async function openCamera() {
 }
 </script>
 
+<button onclick="startRecording()">🎥 Start Video</button>
+<button onclick="stopRecording()">⏹️ Stop Video</button>
+<video id="recordedVideo" controls style="width:100%;max-width:500px;margin-top:20px;display:none;"></video>
+
+<script>
+let mediaRecorder;
+let recordedChunks = [];
+
+function startRecording() {
+  const video = document.getElementById("cameraPreview");
+
+  if (!cameraStream) {
+    alert("Please open the Camera first.");
+    return;
+  }
+
+  if (!video || !video.srcObject) {
+    alert("Please open the Camera first.");
+    return;
+  }
+
+  recordedChunks = [];
+  mediaRecorder = new MediaRecorder(cameraStream);
+
+  mediaRecorder.ondataavailable = function(event) {
+    if (event.data.size > 0) {
+      recordedChunks.push(event.data);
+    }
+  };
+
+  mediaRecorder.onstop = function() {
+    const blob = new Blob(recordedChunks, { type: "video/webm" });
+    const url = URL.createObjectURL(blob);
+    const recordedVideo = document.getElementById("recordedVideo");
+
+    recordedVideo.src = url;
+    recordedVideo.style.display = "block";
+  };
+
+  mediaRecorder.start();
+  alert("🎥 Video recording started.");
+}
+
+function stopRecording() {
+  if (!mediaRecorder || mediaRecorder.state !== "recording") {
+    alert("No video recording is active.");
+    return;
+  }
+
+  mediaRecorder.stop();
+  alert("⏹️ Video recording stopped.");
+}
+</script>
+
+<button onclick="takePhoto()">📸 Take Photo</button>
+<canvas id="photoCanvas" style="display:none;"></canvas>
+<img id="capturedPhoto" style="width:100%;max-width:500px;margin-top:20px;display:none;">
+
+<script>
+function takePhoto() {
+  const video = document.getElementById("cameraPreview");
+
+  if (!cameraStream) {
+    alert("Please open the Camera first.");
+    return;
+  }
+
+  if (!video) {
+    alert("Please open the Camera first.");
+    return;
+  }
+
+  const canvas = document.getElementById("photoCanvas");
+  const photo = document.getElementById("capturedPhoto");
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const context = canvas.getContext("2d");
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  photo.src = canvas.toDataURL("image/png");
+  photo.style.display = "block";
+}
+
+</script>
 <button onclick="openMicrophone()">🎤 Microphone</button>
 <script>
-async function openMicrophone() {
+async function openMicrophone() { alert("MIC BUTTON CLICKED");
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     alert("🎤 Microphone permission granted!");
     window.thilakMicStream = stream;
   } catch (error) {
-    alert("Microphone permission was not granted.");
+    alert("Microphone error: " + error.name + " - " + error.message);
   }
 }
 </script>
@@ -149,10 +238,6 @@ async function openMicrophone() {
 <button onclick="startVoice()">🗣️ Voice to Text</button>
 <p id="voiceText"></p>
 <script>
-async function voiceAskAI() {
-  startVoice();
-}
-
 function startVoice() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
@@ -163,12 +248,13 @@ function startVoice() {
   recognition.lang = "en-US";
   recognition.interimResults = false;
   recognition.onresult = function(event) {
-    document.getElementById("voiceText").textContent = event.results[0][0].transcript;
-    document.getElementById("chatInput").value = event.results[0][0].transcript;
-    setTimeout(() => sendChat(), 100);
+    const text = event.results[0][0].transcript;
+    document.getElementById("voiceText").textContent = text;
+    sendVoiceToAI();
   };
-  recognition.onerror = function() {
-    alert("Voice recognition error.");
+  recognition.onerror = function(event) {
+    alert("Voice recognition error: " + event.error);
+    console.log("Speech recognition error:", event.error);
   };
   recognition.start();
 }
@@ -188,7 +274,6 @@ async function sendVoiceToAI() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: text }),
-      signal: window.thilakAbortController.signal,
     });
     const data = await response.json();
     document.getElementById("aiReply").textContent = data.reply || data.error || "No reply received.";
@@ -234,7 +319,6 @@ async function sendChat() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: text }),
-      signal: window.thilakAbortController.signal,
     });
     const data = await response.json();
     document.getElementById("chatReply").textContent = data.reply || data.error || "No reply received.";
@@ -292,8 +376,6 @@ function toggleTheme() {
   document.body.classList.toggle("dark-mode");
 }
 </script>
-
-<button onclick="voiceAskAI()">🎤 Ask Thilak AI by Voice</button>
 
 </body>
 </html>

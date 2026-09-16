@@ -34,8 +34,7 @@ const server = http.createServer((req, res) => {
 
         const result = await hf.chatCompletion({
 
-model: "deepseek-ai/DeepSeek-V4.1-Flash",
-
+model: "deepseek-ai/DeepSeek-V4.1-Flash",provider: "novita",
 
           messages: [
             {
