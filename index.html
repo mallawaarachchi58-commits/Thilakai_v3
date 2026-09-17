@@ -114,17 +114,15 @@ button[onclick="openMicrophone()"]:active, button[onclick="startVoice()"]:active
 <button onclick="openCamera()">📷 Camera</button>
 
 <script>
-let cameraStream;
-
 async function openCamera() {
   try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
 
     const video = document.createElement("video");
     video.id = "cameraPreview";
     video.autoplay = true;
     video.playsInline = true;
-    video.srcObject = cameraStream;
+    video.srcObject = stream;
     video.style.width = "100%";
     video.style.maxWidth = "500px";
     video.style.marginTop = "20px";
@@ -147,18 +145,13 @@ let recordedChunks = [];
 function startRecording() {
   const video = document.getElementById("cameraPreview");
 
-  if (!cameraStream) {
-    alert("Please open the Camera first.");
-    return;
-  }
-
   if (!video || !video.srcObject) {
     alert("Please open the Camera first.");
     return;
   }
 
   recordedChunks = [];
-  mediaRecorder = new MediaRecorder(cameraStream);
+  mediaRecorder = new MediaRecorder(video.srcObject);
 
   mediaRecorder.ondataavailable = function(event) {
     if (event.data.size > 0) {
@@ -198,11 +191,6 @@ function stopRecording() {
 function takePhoto() {
   const video = document.getElementById("cameraPreview");
 
-  if (!cameraStream) {
-    alert("Please open the Camera first.");
-    return;
-  }
-
   if (!video) {
     alert("Please open the Camera first.");
     return;
@@ -224,13 +212,13 @@ function takePhoto() {
 </script>
 <button onclick="openMicrophone()">🎤 Microphone</button>
 <script>
-async function openMicrophone() { alert("MIC BUTTON CLICKED");
+async function openMicrophone() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     alert("🎤 Microphone permission granted!");
     window.thilakMicStream = stream;
   } catch (error) {
-    alert("Microphone error: " + error.name + " - " + error.message);
+    alert("Microphone permission was not granted.");
   }
 }
 </script>
@@ -248,9 +236,7 @@ function startVoice() {
   recognition.lang = "en-US";
   recognition.interimResults = false;
   recognition.onresult = function(event) {
-    const text = event.results[0][0].transcript;
-    document.getElementById("voiceText").textContent = text;
-    sendVoiceToAI();
+    document.getElementById("voiceText").textContent = event.results[0][0].transcript;
   };
   recognition.onerror = function(event) {
     alert("Voice recognition error: " + event.error);
@@ -274,8 +260,9 @@ async function sendVoiceToAI() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: text }),
+      signal: (window.thilakAbortController || (window.thilakAbortController = new AbortController())).signal,
     });
-    const data = await response.json();
+    const data = await response.json(); console.log("CHAT DATA:", data);
     document.getElementById("aiReply").textContent = data.reply || data.error || "No reply received.";
   } catch (error) {
     document.getElementById("aiReply").textContent = "Connection error.";
@@ -319,12 +306,13 @@ async function sendChat() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: text }),
+      signal: (window.thilakAbortController || (window.thilakAbortController = new AbortController())).signal,
     });
-    const data = await response.json();
+    const data = await response.json(); console.log("CHAT DATA:", data);
     document.getElementById("chatReply").textContent = data.reply || data.error || "No reply received.";
       addChatBubble(data.reply || data.error || "No reply received.", "ai");
   } catch (error) {
-    document.getElementById("chatReply").textContent = "Connection error.";
+    document.getElementById("chatReply").textContent = error.name === "AbortError" ? "🛑 Response stopped." : "Connection error: " + error.message;
   }
 }
 </script>
