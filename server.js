@@ -2,9 +2,6 @@ require("dotenv").config();
 
 const http = require("http");
 const fs = require("fs");
-const { HfInference } = require("@huggingface/inference");
-
-const hf = new HfInference(process.env.HF_TOKEN);
 
 const server = http.createServer((req, res) => {
 
@@ -39,16 +36,29 @@ const server = http.createServer((req, res) => {
 
         console.log("AI REQUEST:", message);
 
-        const result = await hf.chatCompletion({
-          model: "deepseek-ai/DeepSeek-V4.1-Flash",
-          messages: [
-            {
-              role: "user",
-              content: message
-            }
-          ],
-          max_tokens: 200
+        const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + process.env.HF_TOKEN,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "deepseek-ai/DeepSeek-V4.1-Flash",
+            messages: [
+              {
+                role: "user",
+                content: message
+              }
+            ],
+            max_tokens: 200
+          })
         });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error?.message || JSON.stringify(result));
+        }
 
         res.writeHead(200, {
           "Content-Type": "application/json"
