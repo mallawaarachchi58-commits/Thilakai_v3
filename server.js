@@ -36,21 +36,22 @@ const server = http.createServer((req, res) => {
 
         console.log("AI REQUEST:", message);
 
-        const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
+        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent", {
           method: "POST",
           headers: {
-            "Authorization": "Bearer " + process.env.HF_TOKEN,
+            "x-goog-api-key": process.env.GEMINI_API_KEY,
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            model: "deepseek-ai/DeepSeek-V4.1-Flash",
-            messages: [
+            contents: [
               {
-                role: "user",
-                content: message
+                parts: [
+                  {
+                    text: message
+                  }
+                ]
               }
-            ],
-            max_tokens: 200
+            ]
           })
         });
 
@@ -65,7 +66,7 @@ const server = http.createServer((req, res) => {
         });
 
         res.end(JSON.stringify({
-          reply: result.choices[0].message.content
+          reply: result.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("") || "No response from Gemini."
         }));
 
       } catch (error) {
