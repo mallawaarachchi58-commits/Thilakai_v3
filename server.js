@@ -10,16 +10,23 @@ const server = http.createServer((req, res) => {
 
   if (req.url === "/") {
     fs.readFile("index.html", (err, data) => {
+      if (err) {
+        res.writeHead(500);
+        res.end("Error loading page");
+        return;
+      }
+
       res.writeHead(200, {
-        "Content-Type": "text/html"
+        "Content-Type": "text/html; charset=UTF-8"
       });
+
       res.end(data);
     });
+
     return;
   }
 
   if (req.url === "/chat" && req.method === "POST") {
-
     let body = "";
 
     req.on("data", chunk => {
@@ -27,20 +34,13 @@ const server = http.createServer((req, res) => {
     });
 
     req.on("end", async () => {
-
       try {
-
         const message = JSON.parse(body).message;
 
         console.log("AI REQUEST:", message);
+
         const result = await hf.chatCompletion({
-
-
-model: "deepseek-ai/DeepSeek-V4.1-Flash",
-provider: "auto",
-messages:[
-
-
+          model: "deepseek-ai/DeepSeek-V4.1-Flash",
           messages: [
             {
               role: "user",
@@ -58,7 +58,7 @@ messages:[
           reply: result.choices[0].message.content
         }));
 
-       } catch(error) {
+      } catch (error) {
         console.error("===== HUGGING FACE ERROR =====");
         console.error(error);
         console.error("MESSAGE:", error.message);
@@ -73,7 +73,6 @@ messages:[
           error: error.message
         }));
       }
-
     });
 
     return;
@@ -81,10 +80,7 @@ messages:[
 
   res.writeHead(404);
   res.end("Not Found");
-
 });
-
-
 
 const PORT = process.env.PORT || 3000;
 
