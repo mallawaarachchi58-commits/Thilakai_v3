@@ -32,9 +32,10 @@ const server = http.createServer((req, res) => {
 
         const message = JSON.parse(body).message;
 
+        console.log("AI REQUEST:", message);
         const result = await hf.chatCompletion({
 
-model: "deepseek-ai/DeepSeek-V4.1-Flash",provider: "novita",
+model: "deepseek-ai/DeepSeek-V4.1-Flash",
 
           messages: [
             {
@@ -53,7 +54,12 @@ model: "deepseek-ai/DeepSeek-V4.1-Flash",provider: "novita",
           reply: result.choices[0].message.content
         }));
 
-      } catch(error) {
+       } catch(error) {
+        console.error("===== HUGGING FACE ERROR =====");
+        console.error(error);
+        console.error("MESSAGE:", error.message);
+        console.error("STATUS:", error.status);
+        console.error("==============================");
 
         res.writeHead(500, {
           "Content-Type": "application/json"
